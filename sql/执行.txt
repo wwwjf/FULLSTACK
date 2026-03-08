@@ -1,0 +1,14 @@
+方式 1：MySQL 客户端执行
+# 新建数据库（推荐名：dart_admin）：
+CREATE DATABASE IF NOT EXISTS dart_admin DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+USE dart_admin;
+# 执行init.sql 脚本
+
+方式 2：命令行执行
+# 登录MySQL
+mysql -u root -p
+# 新建数据库
+CREATE DATABASE dart_admin DEFAULT CHARSET utf8mb4;
+USE dart_admin;
+# 执行脚本（替换为你的脚本路径）
+source /你的路径/init.sql;
