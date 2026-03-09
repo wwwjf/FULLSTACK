@@ -1,0 +1,50 @@
+import 'package:mysql1/mysql1.dart';
+
+
+void connectMySQL()  {
+  connectToMySQL().then((conn) {
+    print('Connected to MySQL successfully!');
+    _queryUserInfo(conn);
+  }).catchError((e) {
+    print('Failed to connect to MySQL: $e');
+  });
+}
+
+Future<void> _queryUserInfo(MySqlConnection conn) async {
+  try {
+    // 检查当前数据库
+    final dbResult = await conn.query("SELECT DATABASE()");
+    print('Current database: ${dbResult.first[0]}');
+    
+    // 检查表是否存在
+    final tableResult = await conn.query("SHOW TABLES LIKE 'user'");
+    print('Table exists: ${tableResult.isNotEmpty}');
+    
+    final results = await conn.query("SELECT * FROM `user`");
+    print('results: ${results.runtimeType}=$results=${results.length}');
+    for (var row in results) {
+      print('User ID: ${row[0]}, Name: ${row[1]}');
+    }
+  } catch (e) {
+    print('Error querying user info: $e');
+  } finally {
+    await conn.close();
+    print('MySQL connection closed.');
+  }
+}
+
+Future<MySqlConnection> connectToMySQL() async {
+  try {
+    final conn = await MySqlConnection.connect(ConnectionSettings(
+      host: 'localhost',
+      port: 3306,
+      user: 'root',
+      password: 'mima034901'
+      // db: 'dart_admin'  // 暂时去掉，手动USE
+    ));
+    return conn;
+  } catch (e) {
+    print('Error connecting to MySQL: $e');
+    rethrow;
+  }
+}
