@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:alfred/alfred.dart';
 import 'package:dart_backend/utils/crud_util.dart';
 import 'package:dart_backend/utils/log_util.dart';
@@ -49,9 +51,12 @@ void userRoutes(Alfred app) {
     final token = JwtUtil.sign(userId, username);
 
     // 存到 Redis
-    // final redis = await RedisConfig.connect();
-    // await redis.send_object(['SET', 'user:token:$userId', token, 'EX', 86400]);
-
+    if(Platform.isWindows){
+      print('当前平台是Windows，跳过Redis存储');
+    } else {
+      final redis = await RedisConfig.connect();
+      await redis.send_object(['SET', 'user:token:$userId', token, 'EX', 86400]);
+    }
     return ApiResult.success(data: {'token': token});
   });
 
@@ -111,6 +116,14 @@ app.post('/user/login', (req, res) async {
     // final redis = await RedisConfig.connect();
     // await redis.send_object(['SET', 'user:token:$userId', token, 'EX', 7200]);
     // await redis.send_object(['SET', 'user:refresh:$userId', refreshToken, 'EX', 604800]);
+    // 存到 Redis
+    if(Platform.isWindows){
+      print('当前平台是Windows，跳过Redis存储');
+    } else {
+      final redis = await RedisConfig.connect();
+      await redis.send_object(['SET', 'user:token:$userId', token, 'EX', 7200]);
+      await redis.send_object(['SET', 'user:refresh:$userId', refreshToken, 'EX', 604800]);
+    }
 
     return ApiResult.success(data: {
       'token': token,
