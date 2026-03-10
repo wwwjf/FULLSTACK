@@ -1,4 +1,4 @@
-import 'package:mysql1/mysql1.dart';
+
 
 class CrudUtil {
   // 分页查询
@@ -26,7 +26,7 @@ class CrudUtil {
   }
 
   // 结果转List
-  static List<Map<String, dynamic>> toList(Results results) {
-    return results.map((e) => e.fields).toList();
-  }
+  // static List<Map<String, dynamic>> toList(Results results) {
+  //   return results.map((e) => e.fields).toList();
+  // }
 }

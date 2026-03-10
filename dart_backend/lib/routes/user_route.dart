@@ -35,24 +35,22 @@ void userRoutes(Alfred app) {
       return ApiResult.fail('password不能为空');
     }
 
-    final conn = await MysqlConfig.getConnection();
-    final result = await conn.query(
+    final result = await MysqlConfig.executeSql(
       'SELECT id, username FROM user WHERE username = ? AND password = ?',
       [username, password],
     );
-    await conn.close();
 
     if (result.isEmpty) {
       return ApiResult.fail('账号或密码错误');
     }
 
     final row = result.first;
-    final userId = row['id'] as int;
+    final userId = int.parse(row['id']);
     final token = JwtUtil.sign(userId, username);
 
     // 存到 Redis
-    final redis = await RedisConfig.connect();
-    await redis.send_object(['SET', 'user:token:$userId', token, 'EX', 86400]);
+    // final redis = await RedisConfig.connect();
+    // await redis.send_object(['SET', 'user:token:$userId', token, 'EX', 86400]);
 
     return ApiResult.success(data: {'token': token});
   });
@@ -83,7 +81,7 @@ app.post('/user/login', (req, res) async {
   final check = Validator.validate(body, ['username', 'password']);
   if (!check['valid']) return ApiResult.params(check['msg']);
 
-  final username = body!['username'];
+  final username = body['username'];
   final password = body['password'];
 
   try {
@@ -97,7 +95,7 @@ app.post('/user/login', (req, res) async {
       return ApiResult.fail('账号或密码错误');
     }
 
-    final userId = results.first['id'] as int;
+    final userId = int.parse(results.first['id']);
     final token = JwtUtil.sign(userId, username);
     final refreshToken = JwtUtil.signRefresh(userId, username);
 
@@ -110,9 +108,9 @@ app.post('/user/login', (req, res) async {
       status: 'success',
     );
 
-    final redis = await RedisConfig.connect();
-    await redis.send_object(['SET', 'user:token:$userId', token, 'EX', 7200]);
-    await redis.send_object(['SET', 'user:refresh:$userId', refreshToken, 'EX', 604800]);
+    // final redis = await RedisConfig.connect();
+    // await redis.send_object(['SET', 'user:token:$userId', token, 'EX', 7200]);
+    // await redis.send_object(['SET', 'user:refresh:$userId', refreshToken, 'EX', 604800]);
 
     return ApiResult.success(data: {
       'token': token,
@@ -146,7 +144,7 @@ app.get('/user/list', (req, res) async {
   try {
     // 查询总数
     final totalResults = await MysqlConfig.executeSql(
-      'SELECT COUNT(*) AS total FROM user',
+      'SELECT COUNT(*) AS total FROM user',[]
     );
     final total = totalResults.first['total'] as int;
 
