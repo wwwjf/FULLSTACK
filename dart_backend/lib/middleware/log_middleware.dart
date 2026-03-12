@@ -16,4 +16,11 @@ class LogMiddleware {
     LogUtil.info(log);
     print(log);
   }
+
+  Future<void> logMiddleware(req, res) async {
+  final start = DateTime.now();
+  await req.next();
+  final cost = DateTime.now().difference(start).inMilliseconds;
+  print('${req.method} ${req.uri.path} ${res.statusCode} ${cost}ms');
+}
 }

@@ -1,4 +1,5 @@
 import 'package:alfred/alfred.dart';
+import 'package:dart_backend/routes/role_route.dart';
 import 'routes/user_route.dart';
 
 void main() async {
@@ -6,6 +7,8 @@ void main() async {
 
   // 路由
   userRoutes(app);
+  roleRoutes(app);
+
 
   // 404
   app.all('*', (req, res) {

@@ -146,7 +146,7 @@ app.get('/user/list', (req, res) async {
   }
 
   // 安全解析GET参数
-  final params = RequestHelper.safeParseQueryParams(req);
+  final params = req.uri.queryParameters;
   final check = Validator.validate(params, ['page', 'size']);
   if (!check['valid']) return ApiResult.params(check['msg']);
 
@@ -179,4 +179,18 @@ app.get('/user/list', (req, res) async {
     return ApiResult.fail('服务器内部错误');
   }
 });
+
+app.post('/user/login2', (req, res) async {
+    final body = await RequestHelper.safeParseJsonBody(req);
+    if (!Validator.validate(body, ['username', 'password'])['valid']) {
+      return res.json(ApiResult.params('参数错误'));
+    }
+    final u = await MysqlConfig.executeSql(
+      'SELECT id FROM user WHERE username=? AND password=?',
+      [body!['username'], body['password']],
+    );
+    if (u.isEmpty) return res.json(ApiResult.fail('账号或密码错误'));
+    final token = JwtUtil.sign(u.first['id'], body['username']);
+    return res.json(ApiResult.success(data: {'token': token}));
+  });
 }

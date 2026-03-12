@@ -1,35 +1,25 @@
 class ApiResult {
-  final int code;
-  final String msg;
-  final dynamic data;
+  static success({msg = 'ok', data}) => {
+    'code': 200,
+    'msg': msg,
+    'data': data
+  };
 
-  ApiResult({
-    required this.code,
-    required this.msg,
-    this.data,
-  });
+  static fail(msg) => {
+    'code': 400,
+    'msg': msg,
+    'data': null
+  };
 
-  Map<String, dynamic> toJson() {
-    return {
-      'code': code,
-      'msg': msg,
-      'data': data,
-    };
-  }
+  static params(msg) => {
+    'code': 400,
+    'msg': msg,
+    'data': null
+  };
 
-  static ApiResult success({dynamic data, String msg = 'success'}) {
-    return ApiResult(code: 200, msg: msg, data: data);
-  }
-
-  static ApiResult fail(String msg) {
-    return ApiResult(code: 500, msg: msg);
-  }
-
-  static ApiResult unauthorized() {
-    return ApiResult(code: 401, msg: '请先登录');
-  }
-
-  static ApiResult params(String msg) {
-    return ApiResult(code: 400, msg: msg);
-  }
+  static unauthorized() => {
+    'code': 401,
+    'msg': '未授权',
+    'data': null
+  };
 }

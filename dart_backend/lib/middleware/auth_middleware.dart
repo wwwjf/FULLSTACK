@@ -20,4 +20,14 @@ class AuthMiddleware {
     req.store.set('username', payload['username']);
     await next();
   }
+
+
+  Future<void> authMiddleware(req, res) async {
+    final token = req.headers.value('token');
+    if (token == null || JwtUtil.verify(token) == null) {
+      await res.json(ApiResult.unauthorized());
+      return;
+    }
+    await req.next();
+  }
 }

@@ -1,41 +1,39 @@
 import 'package:dart_jsonwebtoken/dart_jsonwebtoken.dart';
-
-const jwtSecret = 'dart_backend_2026_secret_key_20260307';
-const jwtRefreshSecret = 'dart_refresh_secret_key_20260307';
+import 'app_config.dart';
 
 class JwtUtil {
-  // 访问Token 2小时
   static String sign(int userId, String username) {
-    final jwt = JWT({
+    return JWT({
       'userId': userId,
       'username': username,
-    });
-    return jwt.sign(SecretKey(jwtSecret), expiresIn: Duration(hours: 2));
+      'type': 'access',
+      'exp': DateTime.now().add(Duration(seconds: AppConfig.jwtExpires)).millisecondsSinceEpoch ~/ 1000,
+    }).sign(SecretKey(AppConfig.jwtSecret));
   }
 
-  // 刷新Token 7天
   static String signRefresh(int userId, String username) {
-    final jwt = JWT({
+    return JWT({
       'userId': userId,
       'username': username,
-    });
-    return jwt.sign(SecretKey(jwtRefreshSecret), expiresIn: Duration(days: 7));
+      'type': 'refresh',
+      'exp': DateTime.now().add(Duration(seconds: AppConfig.refreshExpires)).millisecondsSinceEpoch ~/ 1000,
+    }).sign(SecretKey(AppConfig.jwtSecret));
   }
 
-  static Map<String, dynamic>? verify(String token) {
+  static Map? verify(String token) {
     try {
-      final jwt = JWT.verify(token, SecretKey(jwtSecret));
-      return jwt.payload;
-    } catch (e) {
+      final d = JWT.verify(token, SecretKey(AppConfig.jwtSecret));
+      return d.payload;
+    } catch (_) {
       return null;
     }
   }
 
-  static Map<String, dynamic>? verifyRefresh(String token) {
+  static Map? verifyRefresh(String token) {
     try {
-      final jwt = JWT.verify(token, SecretKey(jwtRefreshSecret));
-      return jwt.payload;
-    } catch (e) {
+      final d = JWT.verify(token, SecretKey(AppConfig.jwtSecret));
+      return d.payload;
+    } catch (_) {
       return null;
     }
   }
