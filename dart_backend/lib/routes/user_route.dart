@@ -5,6 +5,7 @@ import 'package:dart_backend/utils/crud_util.dart';
 import 'package:dart_backend/utils/log_util.dart';
 import 'package:dart_backend/utils/request_helper.dart';
 import 'package:dart_backend/utils/validator.dart';
+import 'package:dart_backend/utils/email_util.dart';
 import '../config/db.dart';
 import '../config/redis.dart';
 import '../config/jwt.dart';
@@ -192,5 +193,136 @@ app.post('/user/login2', (req, res) async {
     if (u.isEmpty) return res.json(ApiResult.fail('账号或密码错误'));
     final token = JwtUtil.sign(u.first['id'], body['username']);
     return res.json(ApiResult.success(data: {'token': token}));
+  });
+
+  // 发送邮箱验证码
+  app.post('/user/send-code', (req, res) async {
+    final body = await req.bodyAsJsonMap;
+    final check = Validator.validate(body, ['email']);
+    if (!check['valid']) return ApiResult.params(check['msg']);
+
+    final email = body['email'];
+
+    // 验证邮箱格式
+    if (!Validator.isEmail(email)) {
+      return ApiResult.fail('邮箱格式不正确');
+    }
+
+    try {
+      // 检查邮箱是否已被注册
+      final emailCheck = await MysqlConfig.executeSql(
+        'SELECT id FROM user WHERE email=?',
+        [email],
+      );
+      if (emailCheck.isNotEmpty) {
+        return ApiResult.fail('邮箱已被注册');
+      }
+
+      // 生成验证码
+      final code = EmailUtil.generateVerificationCode();
+
+      // 发送验证码邮件
+      final sendSuccess = await EmailUtil.sendVerificationCode(email, code);
+      if (!sendSuccess) {
+        return ApiResult.fail('发送验证码失败，请稍后重试');
+      }
+
+      // 存储验证码到 Redis
+      await EmailUtil.storeVerificationCode(email, code);
+
+      return ApiResult.success(msg: '验证码已发送到您的邮箱，有效期5分钟');
+    } catch (e) {
+      print('❌ 发送验证码失败：$e');
+      return ApiResult.fail('服务器内部错误');
+    }
+  });
+
+  // 邮箱注册
+  app.post('/user/register', (req, res) async {
+    final body = await req.bodyAsJsonMap;
+    final check = Validator.validate(body, ['username', 'password', 'email', 'code']);
+    if (!check['valid']) return ApiResult.params(check['msg']);
+
+    final username = body['username'];
+    final password = body['password'];
+    final email = body['email'];
+    final code = body['code'];
+    final nickname = body['nickname'] ?? '';
+
+    // 验证邮箱格式
+    if (!Validator.isEmail(email)) {
+      return ApiResult.fail('邮箱格式不正确');
+    }
+
+    try {
+      // 验证验证码
+      final codeValid = await EmailUtil.verifyCode(email, code);
+      if (!codeValid) {
+        return ApiResult.fail('验证码错误或已过期');
+      }
+
+      // 检查用户名是否已存在
+      final usernameCheck = await MysqlConfig.executeSql(
+        'SELECT id FROM user WHERE username=?',
+        [username],
+      );
+      if (usernameCheck.isNotEmpty) {
+        return ApiResult.fail('用户名已存在');
+      }
+
+      // 检查邮箱是否已存在
+      final emailCheck = await MysqlConfig.executeSql(
+        'SELECT id FROM user WHERE email=?',
+        [email],
+      );
+      if (emailCheck.isNotEmpty) {
+        return ApiResult.fail('邮箱已被注册');
+      }
+
+      // 插入新用户
+      await MysqlConfig.executeSql(
+        'INSERT INTO user (username, password, email, nickname) VALUES (?, ?, ?, ?)',
+        [username, password, email, nickname],
+      );
+
+      // 获取最后插入的用户ID
+      final lastIdResult = await MysqlConfig.executeSql(
+        'SELECT LAST_INSERT_ID() as id',
+        [],
+      );
+      print('lastIdResult: ${lastIdResult.first['id'].runtimeType}');
+      final userId = int.parse(lastIdResult.first['id']);
+
+      // 为新用户分配默认角色（普通用户，ID为2）
+      await MysqlConfig.executeSql(
+        'INSERT INTO user_role (user_id, role_id) VALUES (?, ?)',
+        [userId, 2],
+      );
+
+      // 生成token
+      final token = JwtUtil.sign(userId, username);
+      final refreshToken = JwtUtil.signRefresh(userId, username);
+
+      // 记录注册日志
+      final ip = req.connectionInfo?.remoteAddress.address ?? 'unknown';
+      await LogUtil.saveLoginLog(
+        userId: userId,
+        username: username,
+        ip: ip,
+        status: 'success',
+        msg: '用户注册',
+      );
+
+      return ApiResult.success(data: {
+        'token': token,
+        'refreshToken': refreshToken,
+        'userId': userId,
+        'username': username,
+        'email': email,
+      });
+    } catch (e) {
+      print('❌ 注册失败：$e');
+      return ApiResult.fail('服务器内部错误');
+    }
   });
 }

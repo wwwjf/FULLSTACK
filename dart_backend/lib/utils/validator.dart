@@ -34,4 +34,10 @@ class Validator {
     final dynamicParams = params.map((k, v) => MapEntry(k, v as dynamic));
     return validate(dynamicParams, requiredKeys);
   }
+
+  /// 验证邮箱格式
+  static bool isEmail(String email) {
+    final emailRegex = RegExp(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$');
+    return emailRegex.hasMatch(email);
+  }
 }
